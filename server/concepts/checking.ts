@@ -11,7 +11,6 @@ export interface PostDoc extends BaseDoc {
   author: ObjectId;
   content: string;
   options?: PostOptions;
-  // images?: TODO;
 }
 
 /**

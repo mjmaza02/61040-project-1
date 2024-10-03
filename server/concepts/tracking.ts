@@ -44,6 +44,15 @@ export default class TrackingConcept {
     return await this.track.partialUpdateOne({ target }, { counter: (tracker.counter+1) });
   }
 
+  async reduce(target: string) {
+        const tracker = await this.track.readOne({ target });
+    if (!tracker) {
+      throw new NotFoundError(`Tracker ${target} not found`);
+    }
+    return await this.track.partialUpdateOne({ target }, { counter: (tracker.counter-1) });
+
+  }
+
   async delete(target:string) {
     return await this.track.deleteOne({ target });
   }

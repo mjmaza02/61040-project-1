@@ -21,24 +21,30 @@ export default class TrackingConcept {
     this.track = new DocCollection<TrackingDoc>(collectionName);
   }
 
-  async create(target: string, counter: number) {
-    const _id = await this.track.createOne({ target, counter });
-    return { msg: "Tracker successfully created!", post: await this.track.readOne({ _id }) };
+  private async create(target: string) {
+    const _id = await this.track.createOne({ target, counter:0 });
+    return this.track.readOne({ _id }) ;
   }
 
   async getByTarget(target: string) {
-    return await this.track.readMany({ target });
+    const tracker = await this.track.readOne({ target });
+    if (!tracker) {
+      return await this.create(target);
+    }
+    return tracker;
   }
 
-  async update(_id: ObjectId, counter?: number) {
+  async update(target: string) {
     // Note that if counter or options is undefined, those fields will *not* be updated
     // since undefined values for partialUpdateOne are ignored.
-    await this.track.partialUpdateOne({ _id }, { counter });
-    return { msg: "Tracker successfully updated!" };
+    const tracker = await this.track.readOne({ target });
+    if (!tracker) {
+      throw new NotFoundError(`Tracker ${target} not found`);
+    }
+    return await this.track.partialUpdateOne({ target }, { counter: (tracker.counter+1) });
   }
 
-  async delete(_id: ObjectId) {
-    await this.track.deleteOne({ _id });
-    return { msg: "Tracker deleted successfully!" };
+  async delete(target:string) {
+    return await this.track.deleteOne({ target });
   }
 }

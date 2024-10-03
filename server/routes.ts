@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Authing, Friending, Posting, Sessioning, Whitelisting } from "./app";
+import { Authing, Friending, Posting, Sessioning, Tracking, Whitelisting } from "./app";
 import { PostOptions } from "./concepts/posting";
 import { SessionDoc } from "./concepts/sessioning";
 import Responses from "./responses";
@@ -181,6 +181,18 @@ class Routes {
   async getWhitelist(session: SessionDoc) {
     const user = Sessioning.getUser(session);
     return await Whitelisting.getList(user);
+  }
+  @Router.get("/track/:target")
+  async getTarget(target: string) {
+    return await Tracking.getByTarget(target);
+  }
+  @Router.patch("/track/:target")
+  async changeTarget(target: string) {
+    return await Tracking.update(target);
+  }
+  @Router.delete("/track/:target")
+  async deleteTarget(target: string) {
+    return await Tracking.delete(target);
   }
 }
 

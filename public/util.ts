@@ -99,6 +99,24 @@ const operations: Operation[] = [
     method: "PATCH",
     fields: { entry: "input" },
   },
+  {
+    name: "Get Tracking for a target",
+    endpoint: "/api/track/:target",
+    method: "GET",
+    fields: { target: "input" },
+  },
+  {
+    name: "Update Tracking for a target",
+    endpoint: "/api/track/:target",
+    method: "PATCH",
+    fields: { target: "input" },
+  },
+  {
+    name: "Get Tracking for a target",
+    endpoint: "/api/track/:target",
+    method: "DELETE",
+    fields: { target: "input" },
+  },
   //
   // ...
   //

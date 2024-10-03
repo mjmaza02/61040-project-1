@@ -95,6 +95,7 @@ class Routes {
   async createPost(session: SessionDoc, content: string, options?: PostOptions) {
     const user = Sessioning.getUser(session);
     const created = await Posting.create(user, content, options);
+    // TODO: Add
     return { msg: created.msg, post: await Responses.post(created.post) };
   }
 
@@ -194,6 +195,9 @@ class Routes {
   @Router.delete("/track/:target")
   async deleteTarget(target: string) {
     return await Tracking.delete(target);
+  }
+  @Router.get("/check/:src")
+  async checkImg(img: ObjectId) {
   }
 }
 

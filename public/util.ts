@@ -112,7 +112,7 @@ const operations: Operation[] = [
     fields: { target: "input" },
   },
   {
-    name: "Get Tracking for a target",
+    name: "Delete Tracking for a target",
     endpoint: "/api/track/:target",
     method: "DELETE",
     fields: { target: "input" },

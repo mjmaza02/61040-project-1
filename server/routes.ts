@@ -36,8 +36,9 @@ class Routes {
   async createUser(session: SessionDoc, username: string, password: string) {
     Sessioning.isLoggedOut(session);
     const aus = await Authing.create(username, password);
-    const usr = await Authing.getUserByUsername(username);
-    await Whitelisting.create(usr._id, []);
+    if (aus.user) {
+      await Whitelisting.create(aus.user._id, [])
+    };
     return aus;
   }
 

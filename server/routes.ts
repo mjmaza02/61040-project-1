@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Authing, Friending, Posting, Sessioning } from "./app";
+import { Authing, Friending, Posting, Sessioning, Whitelisting } from "./app";
 import { PostOptions } from "./concepts/posting";
 import { SessionDoc } from "./concepts/sessioning";
 import Responses from "./responses";
@@ -35,7 +35,10 @@ class Routes {
   @Router.post("/users")
   async createUser(session: SessionDoc, username: string, password: string) {
     Sessioning.isLoggedOut(session);
-    return await Authing.create(username, password);
+    const aus = await Authing.create(username, password);
+    const usr = await Authing.getUserByUsername(username);
+    await Whitelisting.create(usr._id, []);
+    return aus;
   }
 
   @Router.patch("/users/username")
@@ -54,6 +57,10 @@ class Routes {
   async deleteUser(session: SessionDoc) {
     const user = Sessioning.getUser(session);
     Sessioning.end(session);
+    const list = await Whitelisting.getByOwner(user);
+    if (list){
+      Whitelisting.delete(list._id, user);
+    }
     return await Authing.delete(user);
   }
 
@@ -151,6 +158,29 @@ class Routes {
     const user = Sessioning.getUser(session);
     const fromOid = (await Authing.getUserByUsername(from))._id;
     return await Friending.rejectRequest(fromOid, user);
+  }
+
+  // New
+  @Router.patch("/whitelist/add")
+  async addToWhitelist(session: SessionDoc, entry: string) {
+    const user = Sessioning.getUser(session);
+    const oldList = await Whitelisting.getByOwner(user);
+    if (oldList){
+      return await Whitelisting.add(oldList._id, entry);
+    }
+  }
+  @Router.patch("/whitelist/remove")
+  async removeFromWhitelist(session: SessionDoc, entry: string) {
+    const user = Sessioning.getUser(session);
+    const oldList = await Whitelisting.getByOwner(user);
+    if (oldList){
+      return await Whitelisting.remove(oldList._id, entry);
+    }
+  }
+  @Router.get("/whitelist")
+  async getWhitelist(session: SessionDoc) {
+    const user = Sessioning.getUser(session);
+    return await Whitelisting.getList(user);
   }
 }
 

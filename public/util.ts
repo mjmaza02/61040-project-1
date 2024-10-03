@@ -80,6 +80,25 @@ const operations: Operation[] = [
     method: "DELETE",
     fields: { id: "input" },
   },
+  // New
+  {
+    name: "Get Whitelist",
+    endpoint: "/api/whitelist",
+    method: "GET",
+    fields:{},
+  },
+  {
+    name: "Add Entry to Whitelist",
+    endpoint: "/api/whitelist/add",
+    method: "PATCH",
+    fields: { entry: "input" },
+  },
+  {
+    name: "Remove Entry from Whitelist",
+    endpoint: "/api/whitelist/remove",
+    method: "PATCH",
+    fields: { entry: "input" },
+  },
   //
   // ...
   //

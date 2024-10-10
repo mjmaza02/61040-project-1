@@ -100,13 +100,10 @@ class Routes {
   async createPost(session: SessionDoc, content: string, options?: PostOptions, images?: string) {
     const user = Sessioning.getUser(session);
     const created = await Posting.create(user, content, options, images);
-    // if (images) {
-    //   const chk = await Checking.getByOwner(user);
-    //   if (chk) {
-    //     let v = chk.images.push(images);
-    //     await Checking.update(chk._id, chk.images);
-    //   }
-    // }
+    if (images) {
+      const chk = await Checking.getByOwner(user);
+      if (chk) await Checking.update(chk._id, images);
+    }
     return { msg: created.msg, post: await Responses.post(created.post) };
   }
 
@@ -116,9 +113,12 @@ class Routes {
     const oid = new ObjectId(id);
     await Posting.assertAuthorIsUser(oid, user);
     if (images) {
+      const post = await Posting.getOnePost(oid);
       const chk = await Checking.getByOwner(user);
-      chk?.images.push(images);
-      if (chk) await Checking.update(chk._id, chk.images);
+      if (chk && post) {
+        const old_image = post.images;
+        await Checking.swap(chk._id, old_image, images);
+      }
     }
     return await Posting.update(oid, content, options, images);
   }
@@ -128,8 +128,9 @@ class Routes {
     const user = Sessioning.getUser(session);
     const oid = new ObjectId(id);
     await Posting.assertAuthorIsUser(oid, user);
-    const chk = await Checking.getByOwner(user);
-    if (chk) await Checking.delete(chk._id, user);
+    const oldPost = await Posting.getOnePost(oid);
+    const chkId = await Checking.getByOwner(user).then(response => response?._id);
+    if (chkId && oldPost) await Checking.remove(chkId, oldPost.images)
     return Posting.delete(oid);
   }
 

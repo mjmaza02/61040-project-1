@@ -4,7 +4,6 @@ import DocCollection, { BaseDoc } from "../framework/doc";
 import { NotAllowedError, NotFoundError } from "./errors";
 
 import google from "@victorsouzaleal/googlethis";
-import * as fs from 'node:fs/promises';
 
 export interface CheckingDoc extends BaseDoc {
   owner: ObjectId;
@@ -25,7 +24,7 @@ export default class CheckingConcept {
   }
 
   async create(owner: ObjectId) {
-    const _id = await this.chks.createOne({ owner });
+    const _id = await this.chks.createOne({ owner, images:[] });
     return { msg: "Check successfully created!", check: await this.chks.readOne({ _id }) };
   }
 
@@ -33,11 +32,30 @@ export default class CheckingConcept {
     return await this.chks.readOne({ owner });
   }
 
-  async update(_id: ObjectId, images?: string[]) {
+  async update(_id: ObjectId, image?: string) {
     // Note that if content or options is undefined, those fields will *not* be updated
     // since undefined values for partialUpdateOne are ignored.
-    await this.chks.partialUpdateOne({ _id }, { images });
+    let chk = await this.chks.readOne({ _id });
+    if (chk) {
+      if (image) chk.images.push(image);
+      await this.chks.partialUpdateOne({ _id }, { images: chk.images });
+    }
     return { msg: "Check successfully updated!" };
+  }
+
+  async remove(_id: ObjectId, image: string) {
+    const chk = await this.chks.readOne({_id});
+    if (!chk){
+      throw new NotFoundError(`List ${_id} does not exist!`);
+    }
+    const newChecks = chk.images.filter(s=>s!==image);
+    await this.chks.partialUpdateOne({ _id }, { images:newChecks });
+    return { msg: `Removed ${image} from List successfully!`, list:newChecks };
+  }
+
+  async swap(_id: ObjectId, old_image: string, new_image: string) {
+    await this.remove(_id, old_image);
+    await this.update(_id, new_image);
   }
 
   async delete(_id: ObjectId, user: ObjectId) {

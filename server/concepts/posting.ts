@@ -11,7 +11,7 @@ export interface PostDoc extends BaseDoc {
   author: ObjectId;
   content: string;
   options?: PostOptions;
-  images?: string; // string storing location of file, may change to ObjectId later
+  images: string; // string storing location of file, may change to ObjectId later
 }
 
 /**
@@ -35,6 +35,11 @@ export default class PostingConcept {
   async getPosts() {
     // Returns all posts! You might want to page for better client performance
     return await this.posts.readMany({}, { sort: { _id: -1 } });
+  }
+
+  async getOnePost(_id: ObjectId) {
+    // Returns all posts! You might want to page for better client performance
+    return await this.posts.readOne({ _id });
   }
 
   async getByAuthor(author: ObjectId) {

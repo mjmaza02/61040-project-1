@@ -220,7 +220,6 @@ class Routes {
   // }
   @Router.get("/checkIm/temp")
   async tempCheck(src: string) {
-    console.log("CHECKING");
     return await Checking.tCheck(src);
   }
 }

@@ -87,24 +87,46 @@ export default class CheckingConcept {
     }
   }
   async tCheck(src: string) {
-    const imBuffer = await this.download(src);
-    console.log(imBuffer.body);
-    const search = await google.search(imBuffer, { ris: true });
-    console.log("2");
-
-    console.log(typeof (search.results));
-    // return { msg: "RESULTS", list:search.results};
-    return {msg: imBuffer}
+    const imData = await this.download(src);
+    const search = await google.search(imData, { ris: true });
   }
 
   private async download(src: string) {
-    const im = await fetch(src + "&alt=media");
-    if (!im) {
-      throw new NotFoundError("im not found");
-    }
-    const imArr = await im.arrayBuffer()
-    return im;
+    const finalUrl = this.parseUrl(src);
+    console.log(finalUrl);
+    return await this.readUrlData(finalUrl);
   }
+
+  private async readUrlData(url: string) {
+    const response = await fetch(url);
+    if (!response.body) throw new NotFoundError("URL INVALID");
+
+    const reader = response.body.getReader();
+    let data = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        // Do something with last chunk of data then exit reader
+        console.log("OUT");
+        return data;
+      }
+      // Otherwise do something here to process current chunk
+      value.forEach(e => {
+        data += e.toString(16);
+      });
+    }
+  }
+
+  private parseUrl(src: string) {
+    const re = /\/(\w+)\//gm
+    const parsed_src = src.match(re);
+    let fileId = '';
+    if (parsed_src && parsed_src.length == 2) {
+      fileId = parsed_src[1].slice(1,-1);
+    }
+    return "https://drive.usercontent.google.com/download?id=" + fileId;
+  }
+
 }
 
 export class CheckOwnerNotMatchError extends NotAllowedError {

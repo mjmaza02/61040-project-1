@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Authing, Friending, Posting, Sessioning, Tracking, Whitelisting } from "./app";
+import { Authing, Checking, Friending, Posting, Sessioning, Tracking, Whitelisting } from "./app";
 import { PostOptions } from "./concepts/posting";
 import { SessionDoc } from "./concepts/sessioning";
 import Responses from "./responses";
@@ -37,7 +37,8 @@ class Routes {
     Sessioning.isLoggedOut(session);
     const aus = await Authing.create(username, password);
     if (aus.user) {
-      await Whitelisting.create(aus.user._id, [])
+      await Whitelisting.create(aus.user._id, []);
+      await Checking.create(aus.user._id);
     };
     return aus;
   }
@@ -61,6 +62,10 @@ class Routes {
     const list = await Whitelisting.getByOwner(user);
     if (list){
       Whitelisting.delete(list._id, user);
+    }
+    const chk = await Checking.getByOwner(user);
+    if (chk) {
+      Checking.delete(chk._id, user);
     }
     return await Authing.delete(user);
   }
@@ -92,19 +97,30 @@ class Routes {
   }
 
   @Router.post("/posts")
-  async createPost(session: SessionDoc, content: string, options?: PostOptions) {
+  async createPost(session: SessionDoc, content: string, options?: PostOptions, images?: string) {
     const user = Sessioning.getUser(session);
-    const created = await Posting.create(user, content, options);
-    // TODO: Add
+    const created = await Posting.create(user, content, options, images);
+    // if (images) {
+    //   const chk = await Checking.getByOwner(user);
+    //   if (chk) {
+    //     let v = chk.images.push(images);
+    //     await Checking.update(chk._id, chk.images);
+    //   }
+    // }
     return { msg: created.msg, post: await Responses.post(created.post) };
   }
 
   @Router.patch("/posts/:id")
-  async updatePost(session: SessionDoc, id: string, content?: string, options?: PostOptions) {
+  async updatePost(session: SessionDoc, id: string, content?: string, options?: PostOptions, images?: string) {
     const user = Sessioning.getUser(session);
     const oid = new ObjectId(id);
     await Posting.assertAuthorIsUser(oid, user);
-    return await Posting.update(oid, content, options);
+    if (images) {
+      const chk = await Checking.getByOwner(user);
+      chk?.images.push(images);
+      if (chk) await Checking.update(chk._id, chk.images);
+    }
+    return await Posting.update(oid, content, options, images);
   }
 
   @Router.delete("/posts/:id")
@@ -112,6 +128,8 @@ class Routes {
     const user = Sessioning.getUser(session);
     const oid = new ObjectId(id);
     await Posting.assertAuthorIsUser(oid, user);
+    const chk = await Checking.getByOwner(user);
+    if (chk) await Checking.delete(chk._id, user);
     return Posting.delete(oid);
   }
 
@@ -196,8 +214,13 @@ class Routes {
   async deleteTarget(target: string) {
     return await Tracking.delete(target);
   }
-  @Router.get("/check/:src")
-  async checkImg(img: ObjectId) {
+  // @Router.get("/checkIm/:src")
+  // async checkImg(src: string) {
+  // }
+  @Router.get("/checkIm/temp")
+  async tempCheck(src: string) {
+    console.log("CHECKING");
+    return await Checking.tCheck(src);
   }
 }
 

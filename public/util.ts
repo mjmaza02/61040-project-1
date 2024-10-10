@@ -66,13 +66,13 @@ const operations: Operation[] = [
     name: "Create Post",
     endpoint: "/api/posts",
     method: "POST",
-    fields: { content: "input" },
+    fields: { content: "input", images: "input" },
   },
   {
     name: "Update Post",
     endpoint: "/api/posts/:id",
     method: "PATCH",
-    fields: { id: "input", content: "input", options: { backgroundColor: "input" } },
+    fields: { id: "input", content: "input", options: { backgroundColor: "input" }, images: "input" },
   },
   {
     name: "Delete Post",
@@ -116,6 +116,13 @@ const operations: Operation[] = [
     endpoint: "/api/track/:target",
     method: "DELETE",
     fields: { target: "input" },
+  },
+  // TEMP
+  {
+    name: "TEMPORARY CHECK",
+    endpoint: "/api/checkIm/temp",
+    method: "GET",
+    fields: {src: "input"},
   },
   //
   // ...

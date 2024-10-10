@@ -3,71 +3,97 @@ import { ObjectId } from "mongodb";
 import DocCollection, { BaseDoc } from "../framework/doc";
 import { NotAllowedError, NotFoundError } from "./errors";
 
-export interface PostOptions {
-  backgroundColor?: string;
-}
+import google from "@victorsouzaleal/googlethis";
+import * as fs from 'node:fs/promises';
 
-export interface PostDoc extends BaseDoc {
-  author: ObjectId;
-  content: string;
-  options?: PostOptions;
+export interface CheckingDoc extends BaseDoc {
+  owner: ObjectId;
+  images: string[];
 }
 
 /**
- * concept: Posting [Author]
+ * concept: Checking [owner]
  */
-export default class PostingConcept {
-  public readonly posts: DocCollection<PostDoc>;
+export default class CheckingConcept {
+  public readonly chks: DocCollection<CheckingDoc>;
 
   /**
-   * Make an instance of Posting.
+   * Make an instance of Checking.
    */
   constructor(collectionName: string) {
-    this.posts = new DocCollection<PostDoc>(collectionName);
+    this.chks = new DocCollection<CheckingDoc>(collectionName);
   }
 
-  async create(author: ObjectId, content: string, options?: PostOptions) {
-    const _id = await this.posts.createOne({ author, content, options });
-    return { msg: "Post successfully created!", post: await this.posts.readOne({ _id }) };
+  async create(owner: ObjectId) {
+    const _id = await this.chks.createOne({ owner });
+    return { msg: "Check successfully created!", check: await this.chks.readOne({ _id }) };
   }
 
-  async getPosts() {
-    // Returns all posts! You might want to page for better client performance
-    return await this.posts.readMany({}, { sort: { _id: -1 } });
+  async getByOwner(owner: ObjectId) {
+    return await this.chks.readOne({ owner });
   }
 
-  async getByAuthor(author: ObjectId) {
-    return await this.posts.readMany({ author });
-  }
-
-  async update(_id: ObjectId, content?: string, options?: PostOptions) {
+  async update(_id: ObjectId, images?: string[]) {
     // Note that if content or options is undefined, those fields will *not* be updated
     // since undefined values for partialUpdateOne are ignored.
-    await this.posts.partialUpdateOne({ _id }, { content, options });
-    return { msg: "Post successfully updated!" };
+    await this.chks.partialUpdateOne({ _id }, { images });
+    return { msg: "Check successfully updated!" };
   }
 
-  async delete(_id: ObjectId) {
-    await this.posts.deleteOne({ _id });
-    return { msg: "Post deleted successfully!" };
+  async delete(_id: ObjectId, user: ObjectId) {
+    await this.assertOwnerIsUser(_id, user);
+    await this.chks.deleteOne({ _id });
+    return { msg: "Check deleted successfully!" };
   }
 
-  async assertAuthorIsUser(_id: ObjectId, user: ObjectId) {
-    const post = await this.posts.readOne({ _id });
-    if (!post) {
-      throw new NotFoundError(`Post ${_id} does not exist!`);
+  async assertOwnerIsUser(_id: ObjectId, user: ObjectId) {
+    const check = await this.chks.readOne({ _id });
+    if (!check) {
+      throw new NotFoundError(`Check ${_id} does not exist!`);
     }
-    if (post.author.toString() !== user.toString()) {
-      throw new PostAuthorNotMatchError(user, _id);
+    if (check.owner.toString() !== user.toString()) {
+      throw new CheckOwnerNotMatchError(user, _id);
     }
+  }
+
+  async check(_id: ObjectId) {
+    const check = await this.chks.readOne({ _id });
+    let matches = new Array<JSON>;
+    if (!check) {
+      throw new NotFoundError(`Check ${_id} does not exist!`);
+    }
+    for (let src of check.images) {
+      const imBuffer = await this.download(src);
+      const search = await google.search(imBuffer, { ris: true });
+      console.log(typeof (search.results));
+    }
+  }
+  async tCheck(src: string) {
+    const imBuffer = await this.download(src);
+    console.log(imBuffer.body);
+    const search = await google.search(imBuffer, { ris: true });
+    console.log("2");
+
+    console.log(typeof (search.results));
+    // return { msg: "RESULTS", list:search.results};
+    return {msg: imBuffer}
+  }
+
+  private async download(src: string) {
+    const im = await fetch(src + "&alt=media");
+    if (!im) {
+      throw new NotFoundError("im not found");
+    }
+    const imArr = await im.arrayBuffer()
+    return im;
   }
 }
 
-export class PostAuthorNotMatchError extends NotAllowedError {
+export class CheckOwnerNotMatchError extends NotAllowedError {
   constructor(
-    public readonly author: ObjectId,
+    public readonly owner: ObjectId,
     public readonly _id: ObjectId,
   ) {
-    super("{0} is not the author of post {1}!", author, _id);
+    super("{0} is not the owner of {1}!", owner, _id);
   }
 }

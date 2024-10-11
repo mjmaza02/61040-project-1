@@ -3,11 +3,14 @@ import { ObjectId } from "mongodb";
 import DocCollection, { BaseDoc } from "../framework/doc";
 import { NotAllowedError, NotFoundError } from "./errors";
 
-import google from "@victorsouzaleal/googlethis";
-
 export interface CheckingDoc extends BaseDoc {
   owner: ObjectId;
   images: string[];
+}
+
+interface SingleImDoc extends BaseDoc {
+  owner: ObjectId;
+  image: string;
 }
 
 /**
@@ -15,12 +18,14 @@ export interface CheckingDoc extends BaseDoc {
  */
 export default class CheckingConcept {
   public readonly chks: DocCollection<CheckingDoc>;
+  public readonly ims: DocCollection<SingleImDoc>;
 
   /**
    * Make an instance of Checking.
    */
   constructor(collectionName: string) {
     this.chks = new DocCollection<CheckingDoc>(collectionName);
+    this.ims = new DocCollection<SingleImDoc>(collectionName+"Ims")
   }
 
   async create(owner: ObjectId) {
@@ -37,7 +42,11 @@ export default class CheckingConcept {
     // since undefined values for partialUpdateOne are ignored.
     let chk = await this.chks.readOne({ _id });
     if (chk) {
-      if (image) chk.images.push(image);
+      if (image) {
+        const imData = await this.download(image);
+        chk.images.push(image);
+        this.ims.createOne({owner:_id, image: imData});
+      }
       await this.chks.partialUpdateOne({ _id }, { images: chk.images });
     }
     return { msg: "Check successfully updated!" };
@@ -50,6 +59,8 @@ export default class CheckingConcept {
     }
     const newChecks = chk.images.filter(s=>s!==image);
     await this.chks.partialUpdateOne({ _id }, { images:newChecks });
+    const imData = await this.download(image);
+    await this.ims.deleteOne({image:imData});
     return { msg: `Removed ${image} from List successfully!`, list:newChecks };
   }
 
@@ -61,6 +72,7 @@ export default class CheckingConcept {
   async delete(_id: ObjectId, user: ObjectId) {
     await this.assertOwnerIsUser(_id, user);
     await this.chks.deleteOne({ _id });
+    await this.ims.deleteMany({owner:user});
     return { msg: "Check deleted successfully!" };
   }
 
@@ -74,26 +86,15 @@ export default class CheckingConcept {
     }
   }
 
-  async check(_id: ObjectId) {
-    const check = await this.chks.readOne({ _id });
-    let matches = new Array<JSON>;
-    if (!check) {
-      throw new NotFoundError(`Check ${_id} does not exist!`);
-    }
-    for (let src of check.images) {
-      const imBuffer = await this.download(src);
-      const search = await google.search(imBuffer, { ris: true });
-      console.log(typeof (search.results));
-    }
-  }
-  async tCheck(src: string) {
+  async check(src: string) {
     const imData = await this.download(src);
-    const search = await google.search(imData, { ris: true });
+    const posIm = await this.ims.readMany({image:imData});
+    if (posIm.length > 0) throw new ImageExistsError();
+    return {msg: "Image is unique"};
   }
 
   private async download(src: string) {
     const finalUrl = this.parseUrl(src);
-    console.log(finalUrl);
     return await this.readUrlData(finalUrl);
   }
 
@@ -107,7 +108,6 @@ export default class CheckingConcept {
       const { done, value } = await reader.read();
       if (done) {
         // Do something with last chunk of data then exit reader
-        console.log("OUT");
         return data;
       }
       // Otherwise do something here to process current chunk
@@ -118,7 +118,7 @@ export default class CheckingConcept {
   }
 
   private parseUrl(src: string) {
-    const re = /\/(\w+)\//gm
+    const re = /\/([^\/]+.)\//gm
     const parsed_src = src.match(re);
     let fileId = '';
     if (parsed_src && parsed_src.length == 2) {
@@ -135,5 +135,11 @@ export class CheckOwnerNotMatchError extends NotAllowedError {
     public readonly _id: ObjectId,
   ) {
     super("{0} is not the owner of {1}!", owner, _id);
+  }
+}
+export class ImageExistsError extends NotAllowedError {
+  constructor(
+  ) {
+    super("Image already exists");
   }
 }

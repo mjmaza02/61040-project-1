@@ -218,9 +218,9 @@ class Routes {
   // @Router.get("/checkIm/:src")
   // async checkImg(src: string) {
   // }
-  @Router.get("/checkIm/temp")
+  @Router.get("/checkIm")
   async tempCheck(src: string) {
-    return await Checking.tCheck(src);
+    return await Checking.check(src);
   }
 }
 

@@ -120,7 +120,7 @@ const operations: Operation[] = [
   // TEMP
   {
     name: "TEMPORARY CHECK",
-    endpoint: "/api/checkIm/temp",
+    endpoint: "/api/checkIm",
     method: "GET",
     fields: { src: "input" },
   },
